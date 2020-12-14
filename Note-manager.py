@@ -49,7 +49,7 @@ class MainWindow(Ui_Form, QWidget):
     def note_create(self):
         name, ok_pressed = QInputDialog.getText(self, "Имя заметки",
                                                 "Введите имя заметки:")
-        if ok_pressed:
+        if ok_pressed and len(name) <= 40:
             solution = QMessageBox()
             solution.setWindowTitle('Окно выбора')
             solution.setText(f'Выберите тип заметки')
@@ -86,12 +86,13 @@ class MainWindow(Ui_Form, QWidget):
 
             if type_string == 'текстовая':
                 with open(r'texts\{}.txt'.format(self.note.windowTitle()), mode='tw', encoding='utf8'):
-                    print(2)
                     pass
             else:
                 self.note.canvas_heart.pixmap().save(r'pictures\{}.png'.format(self.windowTitle()))
 
-        con.close()
+            con.close()
+        else:
+            error_window('Ошибка при создании заметки', 'Название заметки не должно быть больше 40 символов')
 
     # Функция (слот), которая удаляет заметку из списка открытых заметок
     def data_update(self):
@@ -124,29 +125,42 @@ class MainWindow(Ui_Form, QWidget):
         self.note.closed_window.connect(self.data_update)
 
     # 3 функции ниже отвечают за удаление заметок. Все они также используют функцию delete_event
+    # Удаление происходит тогда, когда нету открытых заметок, иначе всплывёт окно об ошибке функции
     def pictures_delete(self, string):
-        self.delete_event(string)
-        for file in os.listdir('pictures'):
-            os.remove(r'pictures\{}'.format(file))
+        if not self.open_notes:
+            delete_event(string)
+            for file in os.listdir('pictures'):
+                if len(file) <= 40:
+                    os.remove(r'pictures\{}'.format(file))
 
-        self.table_setup('%')
+            self.table_setup('%')
+        else:
+            error_window('Ошибка при удалении', 'Все заметки должны быть закрыты')
 
     def texts_delete(self, string):
-        self.delete_event(string)
-        for file in os.listdir('texts'):
-            os.remove(r'texts\{}'.format(file))
+        if not self.open_notes:
+            delete_event(string)
+            for file in os.listdir('texts'):
+                if len(file) <= 40:
+                    os.remove(r'texts\{}'.format(file))
 
-        self.table_setup('%')
+            self.table_setup('%')
+        else:
+            error_window('Ошибка при удалении', 'Все заметки должны быть закрыты')
 
     def all_delete(self, string):
+        if not self.open_notes:
+            delete_event(string)
+            for file in os.listdir('texts'):
+                if len(file) <= 40:
+                    os.remove(r'texts\{}'.format(file))
+            for file in os.listdir('pictures'):
+                if len(file) <= 40:
+                    os.remove(r'pictures\{}'.format(file))
 
-        self.delete_event(string)
-        for file in os.listdir('texts'):
-            os.remove(r'texts\{}'.format(file))
-        for file in os.listdir('pictures'):
-            os.remove(r'pictures\{}'.format(file))
-
-        self.table_setup('%')
+            self.table_setup('%')
+        else:
+            error_window('Ошибка при удалении', 'Все заметки должны быть закрыты')
 
     # Функция, которая загружает данные в таблицу при запуске, изменении, а также во время поиска
     def table_setup(self, string):
@@ -192,6 +206,14 @@ def delete_event(string):
     cur.execute(string)
     con.commit()
     con.close()
+
+
+# Функция, которая создаеёт окно, когда происходят некоторые ошибки
+def error_window(string_title, string_reason):
+    window = QMessageBox()
+    window.setWindowTitle(string_title)
+    window.setText(string_reason)
+    window.exec()
 
 
 if __name__ == '__main__':
